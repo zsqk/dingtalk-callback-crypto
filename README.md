@@ -23,3 +23,9 @@ const padBuf = new Uint8Array(padCount).fill(padCount);
 大概就是 AES-CBC 加密需要特定的 byte 块, 而这个大小应该是 32,
 所以如果需要加密的数据不是 32 的倍数, 则自动补充. 但这样魔改的方法属实没必要,
 平白增加了不兼容性.
+
+经查, https://www.ietf.org/rfc/rfc3602.txt 中说了:
+
+> The AES uses a block size of sixteen octets (128 bits).
+
+虽然不限制填充什么东西, 但是限制必须为 128 位, 但是钉钉自定义补充的却是 32 位.
