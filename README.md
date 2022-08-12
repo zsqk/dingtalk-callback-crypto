@@ -28,4 +28,7 @@ const padBuf = new Uint8Array(padCount).fill(padCount);
 
 > The AES uses a block size of sixteen octets (128 bits).
 
-虽然不限制填充什么东西, 但是限制必须为 128 位, 但是钉钉自定义补充的却是 32 位.
+虽然不限制填充什么东西, 但是限制必须为 128 位. 钉钉自定义补充的是 32 字节, 256 位.
+从 block size 上看, 钉钉补充的似乎也不会导致解密失败.
+
+虽然没找到根本原因, 但钉钉额外 padding 的数据也会导致直接做块解密的拿到不必要的数据.
