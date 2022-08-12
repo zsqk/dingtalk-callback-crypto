@@ -9,6 +9,7 @@ import {
   u8aToInt,
 } from 'https://deno.land/x/somefn@v0.14.0/js/int.ts';
 import { genRandomString } from 'https://deno.land/x/somefn@v0.14.0/js/str.ts';
+import { hashString } from 'https://deno.land/x/somefn@v0.14.0/js/hash.ts';
 
 /**
  * 钉钉事件回调加解密
@@ -22,19 +23,25 @@ export class DingtalkCallbackCrypto {
   private readonly aeskeyStr: string;
 
   /**
+   * 钉钉后台设置回调时填写的 `token`
+   */
+  private readonly token: string;
+
+  /**
    * 开放平台应用的 `AppKey`
    */
   private readonly appkey: string;
 
-  constructor(opt: { keyStr: string; appkey: string }) {
+  constructor(opt: { keyStr: string; token: string; appkey: string }) {
     this.aeskeyStr = opt.keyStr;
+    this.token = opt.token;
     this.appkey = opt.appkey;
   }
 
   /**
    * 解密方法
    * @param dataStr 需要解密的信息 (base64 编码)
-   * @returns
+   * @returns 解密后的数据 内部字符串为 UTF-8
    */
   public decrypt(dataStr: string): Promise<{
     jsonStr: string;
@@ -46,14 +53,53 @@ export class DingtalkCallbackCrypto {
   /**
    * 加密方法
    * @param dataStr 需要加密的字符串 (UTF-8)
-   * @returns
+   * @returns 加密后的数据 (base64 编码)
    */
   public encrypt(dataStr: string): Promise<string> {
     return encryptDingtalk(this.appkey, this.aeskeyStr, dataStr);
   }
+
+  /**
+   * 生成需要返回给钉钉的数据
+   * @param dataStr 需要加密的字符串 (UTF-8)
+   * @returns 钉钉所需的数据 (钉钉文档中要求的结构)
+   */
+  public async genReturnData(
+    dataStr: string,
+    timestamp: string = Date.now().toString(),
+  ): Promise<{
+    msg_signature: string;
+    timeStamp: string;
+    nonce: string;
+    encrypt: string;
+  }> {
+    const encryptedStr = await this.encrypt(dataStr);
+    const nonce = genRandomString(5, 'abcdefghijkmnpqrstuvwxyz23456789');
+    const msgSignature = await genSignature(
+      this.token,
+      timestamp,
+      nonce,
+      encryptedStr,
+    );
+    return {
+      msg_signature: msgSignature,
+      timeStamp: timestamp,
+      nonce,
+      encrypt: encryptedStr,
+    };
+  }
 }
 
-// https://open.dingtalk.com/document/orgapp-server/configure-event-subcription
+/**
+ * 解密钉钉加密的数据
+ * https://open.dingtalk.com/document/orgapp-server/configure-event-subcription
+ *
+ * @param keyStr
+ * @param dataStr
+ * @returns
+ *
+ * @author Lian Zheren <lzr@go0356.com>
+ */
 function decryptDingtalk(
   keyStr: string,
   dataStr: string,
@@ -78,7 +124,17 @@ function decryptDingtalk(
   return Promise.resolve({ jsonStr, appKey });
 }
 
-// https://open.dingtalk.com/document/orgapp-server/configure-event-subcription
+/**
+ * 加密数据以回传给钉钉
+ * https://open.dingtalk.com/document/orgapp-server/configure-event-subcription
+ *
+ * @param appkey
+ * @param keyStr
+ * @param dataStr
+ * @returns
+ *
+ * @author Lian Zheren <lzr@go0356.com>
+ */
 async function encryptDingtalk(
   appkey: string,
   keyStr: string,
@@ -108,4 +164,21 @@ async function encryptDingtalk(
   );
 
   return encode(encrypted);
+}
+
+/**
+ * 生成签名
+ *
+ * @author Lian Zheren <lzr@go0356.com>
+ */
+async function genSignature(
+  dingtalkToken: string,
+  timestamp: string,
+  nonce: string,
+  encryptRes: string,
+) {
+  const strArr = [dingtalkToken, timestamp, nonce, encryptRes];
+  strArr.sort();
+  const msgSignature = await hashString('SHA-1', strArr.join(''));
+  return msgSignature;
 }
