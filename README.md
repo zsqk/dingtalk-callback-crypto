@@ -24,11 +24,12 @@ const padBuf = new Uint8Array(padCount).fill(padCount);
 所以如果需要加密的数据不是 32 的倍数, 则自动补充. 但这样魔改的方法属实没必要,
 平白增加了不兼容性.
 
-经查, https://www.ietf.org/rfc/rfc3602.txt 中说了:
+经查, <https://www.ietf.org/rfc/rfc3602.txt> 中说:
 
 > The AES uses a block size of sixteen octets (128 bits).
 
-虽然不限制填充什么东西, 但是限制必须为 128 位. 钉钉自定义补充的是 32 字节, 256 位.
+虽然不限制填充什么, 但是限制必须为 128 位. 钉钉自定义补充的是 32 字节, 256 位.
 从 block size 上看, 钉钉补充的似乎也不会导致解密失败.
 
-虽然没找到根本原因, 但钉钉额外 padding 的数据也会导致直接做块解密的拿到不必要的数据.
+虽然没找到根本原因, 但钉钉额外 padding 的数据也会导致直接做块解密的拿到不必要的
+数据, 这种不标准的 padding 可能正是导致 Web Crypto 失败的原因.

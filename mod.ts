@@ -117,9 +117,18 @@ function decryptDingtalk(
   const l = u8aToInt(decrypted.slice(16, 20));
 
   // 获取加密的信息
-  const decryptedStr = new TextDecoder().decode(decrypted.slice(20));
-  const jsonStr = decryptedStr.slice(0, l);
-  const appKey = decryptedStr.slice(l);
+  const jsonStr = new TextDecoder().decode(decrypted.slice(20, 20 + l));
+
+  // 钉钉自定义的补充信息 (不符合 AES-CBC 标准)
+  let pad = decrypted.slice(-1)[0];
+  // 钉钉补充权限的, 根据权限, 补充 pad, pad 特点是长度与值一致
+  for (let i = decrypted.length - 1; i > decrypted.length - 1 - pad; i--) {
+    if (decrypted[i] !== pad) {
+      pad = 0;
+      break;
+    }
+  }
+  const appKey = new TextDecoder().decode(decrypted.slice(20 + l, -pad));
 
   return Promise.resolve({ jsonStr, appKey });
 }

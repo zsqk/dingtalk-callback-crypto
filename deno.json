@@ -5,7 +5,8 @@
   "fmt": {
     "files": {
       "include": [
-        "mod.ts"
+        "mod.ts",
+        "mod.test.ts"
       ]
     },
     "options": {
