@@ -161,15 +161,16 @@ async function encryptDingtalk(
     ['encrypt', 'decrypt'],
   );
 
-  const pre = new TextEncoder().encode(genRandomString(16));
-  const len = intToU8a(dataStr.length, { l: 4 });
-  const data = new TextEncoder().encode(dataStr + appkey);
+  const en = new TextEncoder();
+  const pre = en.encode(genRandomString(16));
+  const data = en.encode(dataStr);
+  const len = intToU8a(data.length, { l: 4 });
 
   const iv = u8aKey.slice(0, 16);
   const encrypted = await crypto.subtle.encrypt(
     { name: 'AES-CBC', iv },
     cryptoKey,
-    new Uint8Array([...pre, ...len, ...data]),
+    new Uint8Array([...pre, ...len, ...data, ...en.encode(appkey)]),
   );
 
   return encode(encrypted);
